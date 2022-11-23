@@ -17,12 +17,32 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 async function run(){
     try{
         const appointmentOptionCollection = client.db('doctorsPortal').collection('appointmentOptions');
+
+        const bookingsCollection = client.db('doctorsPortal').collection('bookings');
         
+        // Use Aggreegate to query multiple collection and then merge data 
         app.get('/appointmentOptions', async(req, res) =>{
+            const date = req.query.date;
+            console.log(date);
             const query = {};
             const options = await appointmentOptionCollection.find(query).toArray();
+            //booking area
+            const bookingQuery = {appointmentDate: date}
+            const alreadyBooked = await bookingsCollection.find(bookingQuery).toArray();
+            options.forEach(option =>{
+                const optionBooked = alreadyBooked.filter(book => book.treatment === option.name);
+                const bookedSlots = optionBooked.map(book => book.slot)
+                console.log(date, option.name, bookedSlots)
+            })
             res.send(options);
+        });
+
+        app.post('/bookings', async(req, res) =>{
+            const booking = req.body;
+            const result = await bookingsCollection.insertOne(booking);
+            res.send(result);
         })
+        
     }
     finally{
 
